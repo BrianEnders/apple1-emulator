@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:stretchColumns="1" >
+    
+    <TableRow>
+    
+        <TextView
+            android:text="@string/file_path"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:layout_column="1"
+            android:layout_span="2" />
+        
+    </TableRow>
+
+    <TableRow>
+        
+        <EditText
+            android:id="@+id/file_path"
+            android:inputType="text|textNoSuggestions"
+            android:maxEms="10"
+            android:layout_column="1" />
+            
+        <Button
+            android:id="@+id/browse"
+            android:text="@string/browse" />
+        
+    </TableRow>
+    
+    <View
+        android:layout_height="2dip"
+        android:background="#FF909090" />
+    
+    <TableRow
+        android:gravity="center_vertical" >
+	   
+	    <TextView
+	        android:text="@string/file_format"
+	        android:textAppearance="?android:attr/textAppearanceMedium"
+	        android:layout_column="1" />
+	    
+	    <RadioGroup
+	        android:id="@+id/file_format"
+	        android:orientation="vertical" >
+		   
+		   <RadioButton
+		       android:id="@+id/file_format_ascii"
+	           android:checked="true"
+	           android:text="@string/file_format_ascii" />
+	       
+	       <RadioButton
+	           android:id="@+id/file_format_binary"
+	           android:text="@string/file_format_binary" />
+	    
+	    </RadioGroup>
+    
+    </TableRow>
+    
+    <View
+        android:layout_height="2dip"
+        android:background="#FF909090" />
+        
+    <TableRow
+        android:gravity="center_vertical" >
+	    
+	    <TextView
+	        android:text="@string/starting_address"
+	        android:textAppearance="?android:attr/textAppearanceMedium"
+	        android:layout_column="1" />
+	    
+	    <EditText
+	        android:id="@+id/starting_address"
+	        android:digits="0123456789ABCDEF"
+	        android:inputType="textCapCharacters|textNoSuggestions|textVisiblePassword"
+	        android:maxLength="4"
+	        android:layout_gravity="right" />
+	       
+    </TableRow>
+    
+    <View
+        android:layout_height="2dip"
+        android:background="#FF909090" />
+    
+    <TableRow
+        android:gravity="center_vertical" >
+	    
+	    <TextView
+	        android:text="@string/ending_address"
+	        android:textAppearance="?android:attr/textAppearanceMedium"
+	        android:layout_column="1" />
+	    
+	    <EditText
+	        android:id="@+id/ending_address"
+	        android:digits="0123456789ABCDEF"
+	        android:inputType="textCapCharacters|textNoSuggestions|textVisiblePassword"
+	        android:maxLength="4"
+	        android:layout_gravity="right" />
+	       
+    </TableRow>
+    
+    <TableRow>
+        
+        <Button
+            android:id="@+id/save"
+            android:text="@string/save"
+            android:layout_column="1"
+            android:layout_span="2" />
+    
+    </TableRow>
+    
+</TableLayout>

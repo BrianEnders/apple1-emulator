@@ -1,0 +1,51 @@
+<resources>
+    <string name="app_name">Pom One Emulator</string>
+
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="location">Location</string>
+    <string name="cant_read_folder">folder can\'t be read!</string>
+    <string name="nnew">New</string>
+    <string name="select">Select</string>
+    <string name="file_name">File name:</string>
+    <string name="cancel">Cancel</string>
+    <string name="create">Save</string>
+    <string name="no_data">No Data</string>
+
+    <color name="gray">#ffff0000</color>
+
+    <string name="err">Error</string>
+    <string name="app_version">1.0.0</string>
+    <string name="app_copyright">Copyright © 2000 Verhille Arnaud\nCopyright © 2012 John D. Corrado
+</string>
+    <string name="reset">Reset</string>
+    <string name="hard_reset">Hard Reset</string>
+    <string name="configure">Configure</string>
+    <string name="load_memory">Load Memory</string>
+    <string name="save_memory">Save Memory</string>
+    <string name="about">About</string>
+    <string name="quit">Quit</string>
+    <string name="pixel_size">Pixel Size</string>
+    <string name="pixel_size_1x">1x</string>
+    <string name="pixel_size_2x">2x</string>
+    <string name="scanlines">Scanlines</string>
+    <string name="terminal_speed">Terminal Speed</string>
+    <string name="ram_8k">RAM 8K</string>
+    <string name="write_in_rom">Write In ROM</string>
+    <string name="irq_brk_vector">IRQ/BRK Vector</string>
+    <string name="blink_cursor">Blink Cursor</string>
+    <string name="block_cursor">Block Cursor</string>
+    <string name="save">Save</string>
+    <string name="file_path">File Path</string>
+    <string name="browse">Browse</string>
+    <string name="file_format">File Format</string>
+    <string name="file_format_ascii">ASCII</string>
+    <string name="file_format_binary">Binary</string>
+    <string name="simulate_keyboard_input">Simulate Keyboard Input</string>
+    <string name="starting_address">Starting Address</string>
+    <string name="load">Load</string>
+    <string name="ending_address">Ending Address</string>
+    <string name="banner_ad_unit_id">ca-app-pub-7298593861312209/5110453030</string>
+
+</resources>

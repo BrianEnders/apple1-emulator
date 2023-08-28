@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pom One Emulator - Help Document</title>
+    <style type="text/css">
+        ol {
+            margin: 0;
+            padding: 0;
+        }
+
+        .c7 {
+            vertical-align: top;
+            width: 234pt;
+            border-style: solid;
+            border-color: #000000;
+            border-width: 1pt;
+            padding: 5pt 5pt 5pt 5pt;
+        }
+
+        .c11 {
+            max-width: 550pt;
+            background-color: #ffffff;
+            padding: 25pt 25pt 25pt 25pt;
+            margin: auto;
+        }
+
+        .c9 {
+            color: inherit;
+            text-decoration: inherit;
+        }
+
+        .c2 {
+            color: #1155cc;
+            text-decoration: underline;
+        }
+
+        .c1 {
+            height: 11pt;
+            text-align: center;
+        }
+
+        .c5 {
+            font-size: 16pt;
+        }
+
+        .c0 {
+            direction: ltr;
+            width: 100%;
+        }
+
+        .c8 {
+            font-weight: bold;
+        }
+
+        .c10 {
+            font-size: 24pt;
+        }
+
+        .c12 {
+            border-collapse: collapse;
+            margin: auto;
+        }
+
+        .c3 {
+            height: 11pt;
+        }
+
+        .c6 {
+            line-height: 1.0;
+        }
+
+        .c4 {
+            text-align: center;
+        }
+
+        .title {
+            text-align: center;
+            color: #000000;
+            font-size: 36pt;
+            font-family: "Arial";
+            font-weight: bold;
+        }
+
+        .subtitle {
+            padding-top: 18pt;
+            line-height: 1.15;
+            text-align: left;
+            color: #666666;
+            font-style: italic;
+            font-size: 24pt;
+            font-family: "Georgia";
+            padding-bottom: 4pt;
+        }
+
+        li {
+            color: #000000;
+
+
+        }
+
+        h1 {
+            padding-top: 24pt;
+            line-height: 1.15;
+            text-align: left;
+            color: #000000;
+            font-size: 18pt;
+            font-family: "Arial";
+            font-weight: bold;
+            padding-bottom: 6pt;
+        }
+
+        h2 {
+            padding-top: 18pt;
+            line-height: 1.15;
+            text-align: left;
+            color: #000000;
+            font-size: 14pt;
+            font-family: "Arial";
+            font-weight: bold;
+            padding-bottom: 4pt;
+        }
+
+        h3 {
+            padding-top: 14pt;
+            line-height: 1.15;
+            text-align: left;
+            color: #666666;
+            font-size: 12pt;
+            font-family: "Arial";
+            font-weight: bold;
+            padding-bottom: 4pt;
+        }
+
+        h4 {
+            padding-top: 12pt;
+            line-height: 1.15;
+            text-align: left;
+            color: #666666;
+            font-style: italic;
+            font-size: 11pt;
+            font-family: "Arial";
+            padding-bottom: 2pt;
+        }
+
+        h5 {
+            padding-top: 11pt;
+            line-height: 1.15;
+            text-align: left;
+            color: #666666;
+            font-size: 10pt;
+            font-family: "Arial";
+            font-weight: bold;
+            padding-bottom: 2pt;
+        }
+
+        h6 {
+            padding-top: 10pt;
+            line-height: 1.15;
+            text-align: left;
+            color: #666666;
+            font-style: italic;
+            font-size: 10pt;
+            font-family: "Arial";
+            padding-bottom: 2pt;
+        }
+    </style>
+</head>
+<body class="c11">
+
+<p class="c0 c4 title">Pom One Apple 1 Emulator</p>
+
+<!--
+<p class="c0 c4"><span class="c2"><a class="c9" href="mailto:support@floortrackr.com">support@floortrackr.com</a></span></p>
+-->
+<p class="c1 c0">&nbsp;</p>
+
+    <h1>About:</h1>
+    <p class="c0">Original Pom1 Source: Verhille Arnaud<br>http://www.gistlabs.net/soft/pom1/pom1.html</p>
+    <p class="c0">Original Android Pom1 Source: John D. Corrado<br>https://pom1.sourceforge.net/</p>
+    <p class="c0">Pom One Emulator Source: Brian Ouellette<br>https://pom1.sourceforge.net/</p>
+
+    <h1>Purpose:</h1>
+    <p class="c0">Pom One is software designed to simulate the hardware of an Apple 1 Computer.</p>
+
+    <h1>Getting Started:</h1>
+        <ul>
+            <li>When you first start the app, you will see a backslash with a blinking cursor under it. This means you are in the Rom Monitor. A simple program to enter bytes into addresses.</li>
+            <li>To enter a byte into an address you would use a command like 1000: a9 41 20 ef ff</li>
+            <li>This will enter five bytes starting at address 1000</li>
+            <li>You can view the bytes with a command like 1000.1004</li>
+            <li>This will list the bytes starting at address 1000</li>
+            <li>The bytes entered at address is a small program to display the letter A on the screen.</li>
+            <li>To run the program, you can use the command 1000R. This means you want to Run starting at address 1000.</li>
+            <li>You shuld see a new line show that says 1000: A9A</li>
+            <li>This means that we are showing the first byte on address 1000 and then the program runs. We see the A directly after.</li>
+            <li>To reset and bring us back to the Rom Monitor, use the menu to perform a Reset.</li>
+        </ul>
+
+<h1>Menu</h1>
+<ul>
+    <li>In the menu, we have a few options:</li>
+    <li>Show/Hide Keyboard. This will toggle the onscreen keyboard. Allows for more screen when using a tablet in landscape and hardware keyboard.</li>
+    <li>Reset: This is a soft reset. No memory is cleared when press and we return back to the Rom Monitor.</li>
+    <li>Hard Reset: This is a hard reset. It is like powering off and on. All memory is cleared in this operation.</li>
+    <li>Load Memory: This will allow us to open a file to load memory into the emulator. Please see Load Memory Section for more info.</li>
+    <li>Save Memory: This will allow us to save to a file memory from the emulator. Please see Save Memory Section for more info.</li>
+    <li>About: A simple about windows</li>
+    <li>Quit: Shuts down the emulator and returns back to Android.</li>
+</ul>
+
+<h1>Load Memory</h1>
+<ul>
+    <li>We have several ways we can load memory into the emulator:</li>
+    <li>Binary File, Ascii Memory, Ascii Text</li>
+    <li>A Binary File is all the bytes in binary form. You will need to specify what the starting address will be when loading.</li>
+    <li>An Ascii Memory file is a text document with the addresses and bytes listed. You can use Simulate Keyboard for entry but without is faster.</li>
+    <li>An Ascii Text file is mostly useful for BASIC listings. You will need to Simulate Keyboard Input to use these.</li>
+</ul>
+
+<h1>Save Memory</h1>
+<ul>
+    <li>We have two ways we can save memory from the emulator:</li>
+    <li>Binary File, Ascii Memory</li>
+    <li>A Binary File is all the bytes in binary form.</li>
+    <li>An Ascii Memory file is a text document with the addresses and bytes listed.</li>
+    <li>In both cases, you need a starting address and ending address in HEX format.</li>
+</ul>
+
+<h1>BASIC Programming</h1>
+<ul>
+    <li>Pom One Emulator comes with BASIC preloaded into memory.</li>
+    <li>To start the BASIC program, type E000R to load into BASIC</li>
+    <li>When you do, you should see a ">" symbol to indicate you have enter into BASIC</li>
+    <li>You can test by typing PRINT 2+2 to see the output of 4 below it.</li>
+</ul>
+
+    <h1>External Resources</h1>
+    <ul>
+        <li>Original Apple 1 and Apple 1 BASIC Manuals are available on archive.org</li>
+        <li>6502 Assembly Language resources are available at 6502.org</li>
+    </ul>
+</body>
+</html>
+

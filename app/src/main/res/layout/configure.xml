@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:stretchColumns="1" >
+
+    <TableRow
+        android:gravity="center_vertical" >
+        
+        <TextView
+            android:text="@string/pixel_size"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:layout_column="1" />
+        
+        <RadioGroup
+            android:id="@+id/pixel_size"
+            android:orientation="horizontal" >
+
+            <RadioButton
+                android:id="@+id/pixel_size_1x"
+                android:checked="true"
+                android:text="@string/pixel_size_1x" />
+
+            <RadioButton
+                android:id="@+id/pixel_size_2x"
+                android:text="@string/pixel_size_2x" />
+            
+        </RadioGroup>
+        
+    </TableRow>
+    
+    <View
+        android:layout_height="2dip"
+        android:background="#FF909090" />
+
+    <TableRow
+        android:gravity="center_vertical" >
+        
+        <TextView
+            android:text="@string/scanlines"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:layout_column="1" />
+        
+        <CheckBox
+            android:id="@+id/scanlines"
+            android:layout_gravity="right"/>
+        
+    </TableRow>
+    
+    <View
+        android:layout_height="2dip"
+        android:background="#FF909090" />
+        
+    <TableRow
+        android:gravity="center_vertical" >
+        
+        <TextView
+            android:text="@string/terminal_speed"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:layout_column="1" />
+
+        <EditText
+            android:id="@+id/terminal_speed"
+            android:inputType="number"
+            android:maxLength="3"
+            android:layout_gravity="right" />
+            
+    </TableRow>
+    
+    <View
+        android:layout_height="2dip"
+        android:background="#FF909090" />
+
+    <TableRow
+        android:gravity="center_vertical" >
+        
+        <TextView
+            android:text="@string/ram_8k"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:layout_column="1" />
+        
+        <CheckBox
+            android:id="@+id/ram_8k"
+            android:layout_gravity="right" />
+        
+    </TableRow>
+    
+    <View
+        android:layout_height="2dip"
+        android:background="#FF909090" />
+
+    <TableRow
+        android:gravity="center_vertical">
+        
+        <TextView
+            android:text="@string/write_in_rom"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:layout_column="1" />
+        
+        <CheckBox
+            android:id="@+id/write_in_rom"
+            android:layout_gravity="right" />
+        
+    </TableRow>
+    
+    <View
+        android:layout_height="2dip"
+        android:background="#FF909090" />
+        
+    <TableRow
+        android:gravity="center_vertical" >
+        
+        <TextView
+            android:text="@string/irq_brk_vector"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:layout_column="1" />
+
+        <EditText
+            android:id="@+id/irq_brk_vector"
+            android:digits="0123456789ABCDEF"
+            android:inputType="textCapCharacters|textNoSuggestions|textVisiblePassword"
+            android:maxLength="4"
+            android:layout_gravity="right" />
+            
+    </TableRow>
+    
+    <View
+        android:layout_height="2dip"
+        android:background="#FF909090" />
+
+    <TableRow
+        android:gravity="center_vertical" >
+        
+        <TextView
+            android:text="@string/blink_cursor"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:layout_column="1" />
+        
+        <CheckBox
+            android:id="@+id/blink_cursor"
+            android:layout_gravity="right" />
+        
+    </TableRow>
+    
+    <View
+        android:layout_height="2dip"
+        android:background="#FF909090" />
+
+    <TableRow
+        android:gravity="center_vertical" >
+        
+        <TextView
+            android:text="@string/block_cursor"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:layout_column="1" />
+        
+        <CheckBox
+            android:id="@+id/block_cursor"
+            android:layout_gravity="right" />
+        
+    </TableRow>
+
+    <TableRow>
+        
+        <Button
+            android:id="@+id/save"
+            android:text="@string/save"
+            android:layout_column="1"
+            android:layout_span="2" />
+    
+    </TableRow>
+       
+</TableLayout>
