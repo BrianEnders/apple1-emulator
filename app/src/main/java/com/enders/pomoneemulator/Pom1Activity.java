@@ -34,18 +34,14 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.ParcelFileDescriptor;
 import android.os.Vibrator;
-import android.provider.DocumentsContract;
 import android.provider.OpenableColumns;
-import android.provider.Settings;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.WebView;
@@ -56,17 +52,10 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.RadioGroup;
 import android.widget.RadioGroup.OnCheckedChangeListener;
-import android.widget.RelativeLayout;
-import android.widget.TableRow;
 import android.widget.Toast;
 import android.Manifest;
 
-import androidx.activity.result.ActivityResult;
-import androidx.activity.result.ActivityResultCallback;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.ads.AdRequest;
@@ -76,13 +65,10 @@ import com.google.android.gms.ads.AdView;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
+
 import java.io.IOException;
 import java.io.InputStream;
-import android.net.Uri;
 
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -102,9 +88,6 @@ public class Pom1Activity extends AppCompatActivity {
 	//public String filePath;
 	public Uri fileURI;
 
-	private static final int MY_REQUEST_CODE_PERMISSION = 1000;
-	private static final int MY_RESULT_CODE_FILECHOOSER = 2000;
-	private static final int STORAGE_PERMISSION_CODE = 100;
 	private Hardware           currentHardware;
 	private Rect               windowRect;
 	public static Pom1Activity me;
@@ -147,21 +130,10 @@ public class Pom1Activity extends AppCompatActivity {
 		screenContainer.addView(screen);
 		screen.setOnKeyListener(keyboard);
 		screen.requestFocus();
-		//screen.setOnKeyListener(keyboard);
-//		mAdView = new AdView(this);
-//		mAdView.setAdUnitId(getString(R.string.banner_ad_unit_id));
-//		adContainerView.addView(mAdView);
-
-//		screenRow.addView(screen);
-//
-
-		//screen.setFocusableInTouchMode(true);
 
 		me = this;
 
 		currentHardware = new Hardware();
-
-		//setContentView(screen);
 
 		adContainerView = findViewById(R.id.adView);
 
@@ -180,8 +152,6 @@ public class Pom1Activity extends AppCompatActivity {
 		windowRect.left = 0;
 		windowRect.right = width;
 		windowRect.bottom = height;
-
-		//Lbog.v("POM1", "windowRect.right - " +windowRect.right);
 		keyboardManager = new KeyboardManager();
 		keyboardManager.keyboard = keyboard;
 		keyboardManager.vibrator = vibrator;
@@ -194,11 +164,6 @@ public class Pom1Activity extends AppCompatActivity {
 		keyboardContainer.requestLayout();
 		loaded = true;
 
-		//m6502.resume();
-		//pia6820.reset();
-		//memory.reset();
-		//memory.resume();
-
 	}
     
 	@Override
@@ -210,21 +175,8 @@ public class Pom1Activity extends AppCompatActivity {
     }
 
 	private void loadBanner() {
-		// Create an ad request. Check your logcat output for the hashed device ID
-		// to get test ads on a physical device, e.g.,
-		// "Use AdRequest.Builder.addTestDevice("ABCDE0123") to get test ads on this
-		// device."
-		AdRequest adRequest =
-				new AdRequest.Builder() .build();
-
-		//AdSize adSize = getAdSize();
-		// Step 4 - Set the adaptive ad size on the ad view.
+		AdRequest adRequest = new AdRequest.Builder() .build();
 		mAdView.setAdSize(AdSize.BANNER);
-
-		//mAdView.setAdSize(adSize);
-
-
-		// Step 5 - Start loading the ad in the background.
 		mAdView.loadAd(adRequest);
 	}
 
@@ -352,21 +304,7 @@ public class Pom1Activity extends AppCompatActivity {
 			button = (Button) findViewById(R.id.browse);
 			button.setOnClickListener(new OnClickListener() {
 				public void onClick(View v) {
-
 					openFile();
-
-//					if (checkPermission()) {
-//						Log.d("POM1", "onClick: Permissions already granted...");
-//						startFileExplorerActivity(SelectionMode.MODE_OPEN);
-//						//createFolder();
-//					} else {
-//						Log.d("POM1", "onClick: Permissions was not granted, request...");
-//						openMode = SelectionMode.MODE_OPEN;
-//						requestPermission();
-//					}
-
-					//askPermissionAndBrowseFile();
-					//startFileExplorerActivity(SelectionMode.MODE_OPEN);
 				}
 			});
 			button = (Button) findViewById(R.id.load);
@@ -393,16 +331,6 @@ public class Pom1Activity extends AppCompatActivity {
 			button = (Button) findViewById(R.id.browse);
 			button.setOnClickListener(new OnClickListener() {
 				public void onClick(View v) {
-//					if (checkPermission()) {
-//						Log.d("POM1", "onClick: Permissions already granted...");
-//						startFileExplorerActivity(SelectionMode.MODE_CREATE);
-//						//createFolder();
-//					} else {
-//						Log.d("POM1", "onClick: Permissions was not granted, request...");
-//						openMode = SelectionMode.MODE_CREATE;
-//						requestPermission();
-//					}
-					//startFileExplorerActivity(SelectionMode.MODE_CREATE);
 					createFile();
 				}
 			});
@@ -482,78 +410,6 @@ public class Pom1Activity extends AppCompatActivity {
 		startActivityForResult(intent, CREATE_FILE);
 	}
 
-
-
-	public boolean checkPermission(){
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
-			//Android is 11(R) or above
-			return Environment.isExternalStorageManager();
-		}
-		else{
-			//Android is below 11(R)
-			int write = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-			int read = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
-
-			return write == PackageManager.PERMISSION_GRANTED && read == PackageManager.PERMISSION_GRANTED;
-		}
-	}
-
-	private void requestPermission(){
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
-			//Android is 11(R) or above
-			try {
-				Log.d("POM1", "requestPermission: try");
-
-				Intent intent = new Intent();
-				intent.setAction(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-				Uri uri = Uri.fromParts("package", this.getPackageName(), null);
-				intent.setData(uri);
-				storageActivityResultLauncher.launch(intent);
-			}
-			catch (Exception e){
-				//Leog.e("POM1", "requestPermission: catch", e);
-				Intent intent = new Intent();
-				intent.setAction(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-				storageActivityResultLauncher.launch(intent);
-			}
-		}
-		else {
-			//Android is below 11(R)
-			ActivityCompat.requestPermissions(
-					this,
-					new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE},
-					STORAGE_PERMISSION_CODE
-			);
-		}
-	}
-
-	private ActivityResultLauncher<Intent> storageActivityResultLauncher = registerForActivityResult(
-			new ActivityResultContracts.StartActivityForResult(),
-			new ActivityResultCallback<ActivityResult>() {
-				@Override
-				public void onActivityResult(ActivityResult result) {
-					Log.d("POM1", "onActivityResult: ");
-					//here we will handle the result of our intent
-					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
-						//Android is 11(R) or above
-						if (Environment.isExternalStorageManager()){
-							//Manage External Storage Permission is granted
-							Log.d("POM1", "onActivityResult: Manage External Storage Permission is granted");
-							startFileExplorerActivity(openMode);//createFolder();
-						}
-						else{
-							//Manage External Storage Permission is denied
-							Log.d("POM1", "onActivityResult: Manage External Storage Permission is denied");
-							Toast.makeText(Pom1Activity.this, "Manage External Storage Permission is denied", Toast.LENGTH_SHORT).show();
-						}
-					}
-					else {
-						//Android is below 11(R)
-					}
-				}
-			}
-	);
-
 	@Override
     public void onBackPressed() {
     	if (isOptionView) {
@@ -601,15 +457,15 @@ public class Pom1Activity extends AppCompatActivity {
     		screen.pause(); 
     	}
     	
-    	if (isFinishing()) {
-    		SharedPreferences.Editor editor = preferences.edit();
-    		pia6820.saveState(editor);
-    		memory.saveState(editor);
-    		m6502.saveState(editor);
-    		screen.saveState(editor);
-    		editor.commit();
-    		screen.closeInputFile();
-    	}
+//    	if (isFinishing()) {
+//    		SharedPreferences.Editor editor = preferences.edit();
+//    		pia6820.saveState(editor);
+//    		memory.saveState(editor);
+//    		m6502.saveState(editor);
+//    		screen.saveState(editor);
+//    		editor.commit();
+//    		screen.closeInputFile();
+//    	}
     }
 	
 	@Override
@@ -677,20 +533,7 @@ public class Pom1Activity extends AppCompatActivity {
 
 	@SuppressLint("MissingInflatedId")
 	public void loadMemory() {
-//		EditText editText = (EditText) findViewById(R.id.file_path);
-//
-//		if (editText.length() == 0) {
-//			Toast.makeText(this, "File path not set", Toast.LENGTH_SHORT).show();
-//			return;
-//		}
-//
-//		filePath = editText.getText().toString();
-//
-//		if (!filePath.startsWith("/") || filePath.endsWith("/")) {
-//			Toast.makeText(this, "File path is invalid", Toast.LENGTH_SHORT).show();
-//			return;
-//		}
-		
+
 		RadioGroup radioGroup = (RadioGroup) findViewById(R.id.file_format);
 		
 		if (radioGroup.getCheckedRadioButtonId() == R.id.file_format_ascii) {
@@ -854,14 +697,7 @@ public class Pom1Activity extends AppCompatActivity {
 			Toast.makeText(this, "File path not set", Toast.LENGTH_SHORT).show();
 			return;
 		}
-		
-		//filePath = editText.getText().toString();
-		
-//		if (!filePath.startsWith("/") || filePath.endsWith("/")) {
-//			Toast.makeText(this, "File path is invalid", Toast.LENGTH_SHORT).show();
-//			return;
-//		}
-		
+
 		editText = (EditText) findViewById(R.id.starting_address);
 		
 		if (editText.length() == 0) {
@@ -900,14 +736,6 @@ public class Pom1Activity extends AppCompatActivity {
 				//writer = new BufferedWriter(new
 				writer = new BufferedWriter(new OutputStreamWriter(Objects.requireNonNull(outputStream)));
 
-
-//				FileOutputStream fileOutputStream =
-//						new FileOutputStream(pfd.getFileDescriptor());
-//				fileOutputStream.write(("Overwritten at " + System.currentTimeMillis() +
-//						"\n").getBytes());
-//
-//
-//				writer = new BufferedWriter(new FileWriter(new File(filePath)));
 				fbrut = memory.dumpMemory(start, end);
 
 				if (fbrut != null) {
@@ -945,7 +773,6 @@ public class Pom1Activity extends AppCompatActivity {
 			FileOutputStream fos = null;
 
 			try {
-				//DocumentsContract.deleteDocument(getContentResolver(), fileURI);
 
 				ParcelFileDescriptor pfd = getContentResolver().
 						openFileDescriptor(fileURI, "wt");
@@ -953,13 +780,11 @@ public class Pom1Activity extends AppCompatActivity {
 				FileOutputStream fileOutputStream =
 						new FileOutputStream(pfd.getFileDescriptor());
 
-				//fos = new FileOutputStream(new File(filePath));
 				fbrut = memory.dumpMemory(start, end);
 
 				if (fbrut != null && fileOutputStream != null) {
 
 					fileOutputStream.write(fbrut);
-					//fos.write(fbrut);
 					fileOutputStream.close();
 					pfd.close();
 
@@ -983,45 +808,6 @@ public class Pom1Activity extends AppCompatActivity {
 
 		InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
 		imm.hideSoftInputFromWindow(screen.getWindowToken(), 0);
-	}
-	
-	public void startFileExplorerActivity(int selectionMode) {
-		Intent intent = new Intent(this, FileDialog.class);
-        intent.putExtra(FileDialog.START_PATH, Environment.getExternalStorageDirectory().getPath());
-        intent.putExtra(FileDialog.CAN_SELECT_DIR, false);
-        intent.putExtra(FileDialog.SELECTION_MODE, selectionMode);
-        startActivityForResult(intent, 0);
-	}
-
-	// When you have the request results
-	@Override
-	public void onRequestPermissionsResult(int requestCode,
-										   String permissions[], int[] grantResults) {
-
-		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-		//
-		switch (requestCode) {
-			case MY_REQUEST_CODE_PERMISSION: {
-
-				// Note: If request is cancelled, the result arrays are empty.
-				// Permissions granted (CALL_PHONE).
-				if (grantResults.length > 0
-						&& grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
-					Log.i( "POM1","Permission granted!");
-					Toast.makeText(this, "Permission granted!", Toast.LENGTH_SHORT).show();
-
-					startFileExplorerActivity(openMode);
-					//this.doBrowseFile();
-				}
-				// Cancelled or denied.
-				else {
-					Log.i("POM1","Permission denied!");
-					Toast.makeText(this, "Permission denied!", Toast.LENGTH_SHORT).show();
-				}
-				break;
-			}
-		}
 	}
 
 	public int getKeyWidth() {
