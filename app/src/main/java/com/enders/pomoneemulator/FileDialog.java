@@ -219,9 +219,9 @@ public class FileDialog extends ListActivity {
 
 		if (!currentPath.equals(ROOT)) {
 
-			item.add(ROOT);
-			addItem(ROOT, R.drawable.folder);
-			path.add(ROOT);
+//			item.add(ROOT);
+//			addItem(ROOT, R.drawable.folder);
+//			path.add(ROOT);
 
 			item.add("../");
 			addItem("../", R.drawable.folder);
@@ -235,7 +235,7 @@ public class FileDialog extends ListActivity {
 		TreeMap<String, String> filesMap = new TreeMap<String, String>();
 		TreeMap<String, String> filesPathMap = new TreeMap<String, String>();
 		for (File file : files) {
-			Log.v("POM1", file.getName());
+			//Leog.v("POM1", file.getName());
 
 			if (file.isDirectory()) {
 				String dirName = file.getName();

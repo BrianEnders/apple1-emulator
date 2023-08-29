@@ -34,11 +34,11 @@ public class Keyboard implements OnKeyListener {
 
 	public boolean onKey(View view, int keyCode, KeyEvent event) {
 
-        Log.v("KEYEVENT", "PIA: " + pia6820.readKbdCr());
+        //Leog.v("KEYEVENT", "PIA: " + pia6820.readKbdCr());
 		if (pia6820.readKbdCr() == 0x27 && !screen.isInputFileOpen() && event.getAction() == KeyEvent.ACTION_DOWN && (event.getUnicodeChar() & 0xFF80) == 0 && event.getUnicodeChar() != 0) {
-            //Log.v("KEYEVENT", "KEY: " + keyCode);
+            //Loeg.v("KEYEVENT", "KEY: " + keyCode);
 			int tmp = event.getUnicodeChar() & 0x7F;
-			Log.v("KEYEVENT", "KEY tmp: " + tmp);
+			//Leog.v("KEYEVENT", "KEY tmp: " + tmp);
 
 			if (tmp >= 0x61 && tmp <= 0x7A)
 				tmp &= 0x5F;

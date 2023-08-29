@@ -26,12 +26,16 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.ParcelFileDescriptor;
 import android.os.Vibrator;
+import android.provider.DocumentsContract;
+import android.provider.OpenableColumns;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -77,6 +81,13 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import android.net.Uri;
+
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 public class Pom1Activity extends AppCompatActivity {
@@ -88,8 +99,8 @@ public class Pom1Activity extends AppCompatActivity {
 	public Keyboard keyboard;
 	public boolean isOptionView;
 	public BufferedReader reader;
-	public String filePath;
-
+	//public String filePath;
+	public Uri fileURI;
 
 	private static final int MY_REQUEST_CODE_PERMISSION = 1000;
 	private static final int MY_RESULT_CODE_FILECHOOSER = 2000;
@@ -170,7 +181,7 @@ public class Pom1Activity extends AppCompatActivity {
 		windowRect.right = width;
 		windowRect.bottom = height;
 
-		Log.v("POM1", "windowRect.right - " +windowRect.right);
+		//Lbog.v("POM1", "windowRect.right - " +windowRect.right);
 		keyboardManager = new KeyboardManager();
 		keyboardManager.keyboard = keyboard;
 		keyboardManager.vibrator = vibrator;
@@ -342,15 +353,17 @@ public class Pom1Activity extends AppCompatActivity {
 			button.setOnClickListener(new OnClickListener() {
 				public void onClick(View v) {
 
-					if (checkPermission()) {
-						Log.d("POM1", "onClick: Permissions already granted...");
-						startFileExplorerActivity(SelectionMode.MODE_OPEN);
-						//createFolder();
-					} else {
-						Log.d("POM1", "onClick: Permissions was not granted, request...");
-						openMode = SelectionMode.MODE_OPEN;
-						requestPermission();
-					}
+					openFile();
+
+//					if (checkPermission()) {
+//						Log.d("POM1", "onClick: Permissions already granted...");
+//						startFileExplorerActivity(SelectionMode.MODE_OPEN);
+//						//createFolder();
+//					} else {
+//						Log.d("POM1", "onClick: Permissions was not granted, request...");
+//						openMode = SelectionMode.MODE_OPEN;
+//						requestPermission();
+//					}
 
 					//askPermissionAndBrowseFile();
 					//startFileExplorerActivity(SelectionMode.MODE_OPEN);
@@ -372,6 +385,7 @@ public class Pom1Activity extends AppCompatActivity {
 
 			screenContainer.removeView(screen);
 			setContentView(R.layout.save_memory);
+
 			editText = (EditText) findViewById(R.id.starting_address);
 			editText.setWidth(editText.getPaddingLeft() + editText.getPaddingRight() + (int) editText.getPaint().measureText("DDDD"));
 			editText = (EditText) findViewById(R.id.ending_address);
@@ -379,16 +393,17 @@ public class Pom1Activity extends AppCompatActivity {
 			button = (Button) findViewById(R.id.browse);
 			button.setOnClickListener(new OnClickListener() {
 				public void onClick(View v) {
-					if (checkPermission()) {
-						Log.d("POM1", "onClick: Permissions already granted...");
-						startFileExplorerActivity(SelectionMode.MODE_CREATE);
-						//createFolder();
-					} else {
-						Log.d("POM1", "onClick: Permissions was not granted, request...");
-						openMode = SelectionMode.MODE_CREATE;
-						requestPermission();
-					}
+//					if (checkPermission()) {
+//						Log.d("POM1", "onClick: Permissions already granted...");
+//						startFileExplorerActivity(SelectionMode.MODE_CREATE);
+//						//createFolder();
+//					} else {
+//						Log.d("POM1", "onClick: Permissions was not granted, request...");
+//						openMode = SelectionMode.MODE_CREATE;
+//						requestPermission();
+//					}
 					//startFileExplorerActivity(SelectionMode.MODE_CREATE);
+					createFile();
 				}
 			});
 			button = (Button) findViewById(R.id.save);
@@ -438,6 +453,37 @@ public class Pom1Activity extends AppCompatActivity {
     }
 	private long mLastPress = 0;
 
+	private static final int PICK_PDF_FILE = 2;
+
+	private void openFile() {
+		Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+		intent.addCategory(Intent.CATEGORY_OPENABLE);
+		intent.setType("*/*");
+
+		// Optionally, specify a URI for the file that should appear in the
+		// system file picker when it loads.
+		//intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, pickerInitialUri);
+
+		startActivityForResult(intent, PICK_PDF_FILE);
+	}
+
+	private static final int CREATE_FILE = 1;
+
+	private void createFile() {
+		Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+		intent.addCategory(Intent.CATEGORY_OPENABLE);
+		intent.setType("*/*");
+		intent.putExtra(Intent.EXTRA_TITLE, "test.bin");
+
+		// Optionally, specify a URI for the directory that should be opened in
+		// the system file picker when your app creates the document.
+		//intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, pickerInitialUri);
+
+		startActivityForResult(intent, CREATE_FILE);
+	}
+
+
+
 	public boolean checkPermission(){
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
 			//Android is 11(R) or above
@@ -465,7 +511,7 @@ public class Pom1Activity extends AppCompatActivity {
 				storageActivityResultLauncher.launch(intent);
 			}
 			catch (Exception e){
-				Log.e("POM1", "requestPermission: catch", e);
+				//Leog.e("POM1", "requestPermission: catch", e);
 				Intent intent = new Intent();
 				intent.setAction(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
 				storageActivityResultLauncher.launch(intent);
@@ -532,7 +578,7 @@ public class Pom1Activity extends AppCompatActivity {
 
 	@Override
     public void onResume() {
-		Log.v("POM1", "onResume" );
+		//Lbog.v("POM1", "onResume" );
 
 		super.onResume();
 		
@@ -548,7 +594,7 @@ public class Pom1Activity extends AppCompatActivity {
     public void onPause() {
     	super.onPause();
     	
-    	Log.v("POM1", "onPause - Rotate" );
+    	//Lbog.v("POM1", "onPause - Rotate" );
     	
     	if (!isOptionView) {
     		m6502.pause();
@@ -568,12 +614,16 @@ public class Pom1Activity extends AppCompatActivity {
 	
 	@Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		if (resultCode == Activity.RESULT_OK && requestCode == 0) {
+		if (resultCode == Activity.RESULT_OK && requestCode == PICK_PDF_FILE) {
 			EditText editText = (EditText) findViewById(R.id.file_path);
-			editText.setText(data.getStringExtra(FileDialog.RESULT_PATH));
+			fileURI = data.getData();
+			editText.setText(fileURI.getPath());
+		} else if (resultCode == Activity.RESULT_OK && requestCode == CREATE_FILE) {
+			EditText editText = (EditText) findViewById(R.id.file_path);
+			fileURI = data.getData();
+			editText.setText(fileURI.getPath());
 		} else
 			super.onActivityResult(requestCode, resultCode, data);
-
     }
 	
 	public void saveConfiguration() {
@@ -627,25 +677,27 @@ public class Pom1Activity extends AppCompatActivity {
 
 	@SuppressLint("MissingInflatedId")
 	public void loadMemory() {
-		EditText editText = (EditText) findViewById(R.id.file_path);
-		
-		if (editText.length() == 0) {
-			Toast.makeText(this, "File path not set", Toast.LENGTH_SHORT).show();
-			return;
-		}
-		
-		filePath = editText.getText().toString();
-		
-		if (!filePath.startsWith("/") || filePath.endsWith("/")) {
-			Toast.makeText(this, "File path is invalid", Toast.LENGTH_SHORT).show();
-			return;
-		}
+//		EditText editText = (EditText) findViewById(R.id.file_path);
+//
+//		if (editText.length() == 0) {
+//			Toast.makeText(this, "File path not set", Toast.LENGTH_SHORT).show();
+//			return;
+//		}
+//
+//		filePath = editText.getText().toString();
+//
+//		if (!filePath.startsWith("/") || filePath.endsWith("/")) {
+//			Toast.makeText(this, "File path is invalid", Toast.LENGTH_SHORT).show();
+//			return;
+//		}
 		
 		RadioGroup radioGroup = (RadioGroup) findViewById(R.id.file_format);
 		
 		if (radioGroup.getCheckedRadioButtonId() == R.id.file_format_ascii) {
 			try {
-				reader = new BufferedReader(new FileReader(new File(filePath)));
+				InputStream inputStream =
+						getContentResolver().openInputStream(fileURI);
+				reader = new BufferedReader(new InputStreamReader(Objects.requireNonNull(inputStream)));
 				
 				CheckBox checkBox = (CheckBox) findViewById(R.id.simulate_keybaord_input);
 				
@@ -657,7 +709,7 @@ public class Pom1Activity extends AppCompatActivity {
 								case DialogInterface.BUTTON_POSITIVE:
 									screen.closeInputFile();
 									Toast.makeText(Pom1Activity.this, "Canceled loading \"" + screen.getInputFilePath() + "\"", Toast.LENGTH_SHORT).show();
-									screen.setInputFile(reader, filePath);
+									screen.setInputFile(reader, fileURI);
 									break;
 								case DialogInterface.BUTTON_NEGATIVE:
 									if (reader != null) {
@@ -685,7 +737,7 @@ public class Pom1Activity extends AppCompatActivity {
 						return;
 					}
 					
-					screen.setInputFile(reader, filePath);
+					screen.setInputFile(reader, fileURI);
 				} else {
 					String str;
 					int i, address = 0, length, value;
@@ -723,11 +775,11 @@ public class Pom1Activity extends AppCompatActivity {
 						}
 					}
 					
-					Toast.makeText(this, "Successfully loaded \"" + filePath + "\"", Toast.LENGTH_SHORT).show();
+					Toast.makeText(this, "Successfully loaded \"" + fileURI.getPath() + "\"", Toast.LENGTH_SHORT).show();
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
-				Toast.makeText(this, "Failed to load \"" + filePath + "\"", Toast.LENGTH_SHORT).show();
+				Toast.makeText(this, "Failed to load \"" + fileURI.getPath() + "\"", Toast.LENGTH_SHORT).show();
 			} finally {
 				if (reader != null && !screen.isInputFileOpen()) {
 					try {
@@ -738,7 +790,7 @@ public class Pom1Activity extends AppCompatActivity {
 				}
 			}
 		} else {
-			editText = (EditText) findViewById(R.id.starting_address);
+			EditText editText = (EditText) findViewById(R.id.starting_address);
 			
 			if (editText.length() == 0) {
 				Toast.makeText(this, "Starting address not set", Toast.LENGTH_SHORT).show();
@@ -747,30 +799,39 @@ public class Pom1Activity extends AppCompatActivity {
 			
 			int start = Integer.parseInt(editText.getText().toString(), 16);
 			
-			File file = new File(filePath);
-			
-			int size = (int) file.length();
-			
+			File file = new File(fileURI.getPath());
+
+			Cursor returnCursor =
+					getContentResolver().query(fileURI, null, null, null, null);
+			int sizeIndex = returnCursor.getColumnIndex(OpenableColumns.SIZE);
+			returnCursor.moveToFirst();
+
+			int size = (int) returnCursor.getLong(sizeIndex);
+
 			if (size > 65536 || start + size - 1 > 65535) {
 				Toast.makeText(this, "File size too large", Toast.LENGTH_SHORT).show();
 				return;
+			}else{
+				Toast.makeText(this, "File size "+size, Toast.LENGTH_SHORT).show();
+
 			}
-			
-			FileInputStream fis = null;
+
+			InputStream fis = null;
 
 			try {
-				fis = new FileInputStream(new File(filePath));
-				
+			 	fis = getContentResolver().openInputStream(fileURI);
+			//fis = new InputStream(new File(fileURI.getPath()));
+//
 				byte[] fbrut = new byte[size];
-				
+//
 				if (fbrut != null) {
 					fis.read(fbrut);
 					memory.setMemory(fbrut, start, size);
-					Toast.makeText(this, "Successfully loaded \"" + filePath + "\"", Toast.LENGTH_SHORT).show();
+					Toast.makeText(this, "Successfully loaded \"" + fileURI.getPath() + "\"", Toast.LENGTH_SHORT).show();
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
-				Toast.makeText(this, "Failed to load \"" + filePath + "\"", Toast.LENGTH_SHORT).show();
+				Toast.makeText(this, "Failed to load \"" + fileURI.getPath() + "\"", Toast.LENGTH_SHORT).show();
 			}
 		}
 
@@ -780,7 +841,7 @@ public class Pom1Activity extends AppCompatActivity {
 		m6502.resume();
 		screen.resume();
 
-		//screen.closeInputFile();
+		screen.closeInputFile();
 
 		InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
 		imm.hideSoftInputFromWindow(screen.getWindowToken(), 0);
@@ -794,12 +855,12 @@ public class Pom1Activity extends AppCompatActivity {
 			return;
 		}
 		
-		filePath = editText.getText().toString();
+		//filePath = editText.getText().toString();
 		
-		if (!filePath.startsWith("/") || filePath.endsWith("/")) {
-			Toast.makeText(this, "File path is invalid", Toast.LENGTH_SHORT).show();
-			return;
-		}
+//		if (!filePath.startsWith("/") || filePath.endsWith("/")) {
+//			Toast.makeText(this, "File path is invalid", Toast.LENGTH_SHORT).show();
+//			return;
+//		}
 		
 		editText = (EditText) findViewById(R.id.starting_address);
 		
@@ -831,33 +892,46 @@ public class Pom1Activity extends AppCompatActivity {
 		
 		if (radioGroup.getCheckedRadioButtonId() == R.id.file_format_ascii) {
 			BufferedWriter writer = null;
-			
+
 			try {
-				writer = new BufferedWriter(new FileWriter(new File(filePath)));
+
+				OutputStream outputStream =
+						getContentResolver().openOutputStream(fileURI);
+				//writer = new BufferedWriter(new
+				writer = new BufferedWriter(new OutputStreamWriter(Objects.requireNonNull(outputStream)));
+
+
+//				FileOutputStream fileOutputStream =
+//						new FileOutputStream(pfd.getFileDescriptor());
+//				fileOutputStream.write(("Overwritten at " + System.currentTimeMillis() +
+//						"\n").getBytes());
+//
+//
+//				writer = new BufferedWriter(new FileWriter(new File(filePath)));
 				fbrut = memory.dumpMemory(start, end);
-				
+
 				if (fbrut != null) {
-					String str = "// Pom1 Save - " + filePath.substring(filePath.lastIndexOf('/') + 1);
-					
+					String str = "// Pom1 Save ";
+
 					int length = end - start + 1;
-					
+
 					for (int i = 0, j = start; i < length; i++) {
 						if (i % 8 == 0) {
 							writer.write(str);
 							str = String.format("\n%04X:", j);
 							j += 8;
 						}
-						
+
 						str += String.format("%02X ", fbrut[i]);
 					}
-					
+
 					writer.write(str);
-					
-					Toast.makeText(this, "Successfully saved \"" + filePath + "\"", Toast.LENGTH_SHORT).show();
+
+					Toast.makeText(this, "Successfully saved \"" + fileURI.getPath() + "\"", Toast.LENGTH_SHORT).show();
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
-				Toast.makeText(this, "Failed to save \"" + filePath + "\"", Toast.LENGTH_SHORT).show();
+				Toast.makeText(this, "Failed to save \"" + fileURI.getPath() + "\"", Toast.LENGTH_SHORT).show();
 			} finally {
 				if (writer != null) {
 					try {
@@ -869,18 +943,33 @@ public class Pom1Activity extends AppCompatActivity {
 			}
 		} else {
 			FileOutputStream fos = null;
-			
+
 			try {
-				fos = new FileOutputStream(new File(filePath));
+				//DocumentsContract.deleteDocument(getContentResolver(), fileURI);
+
+				ParcelFileDescriptor pfd = getContentResolver().
+						openFileDescriptor(fileURI, "wt");
+
+				FileOutputStream fileOutputStream =
+						new FileOutputStream(pfd.getFileDescriptor());
+
+				//fos = new FileOutputStream(new File(filePath));
 				fbrut = memory.dumpMemory(start, end);
-				
-				if (fbrut != null) {
-					fos.write(fbrut);
-					Toast.makeText(this, "Successfully saved \"" + filePath + "\"", Toast.LENGTH_SHORT).show();
+
+				if (fbrut != null && fileOutputStream != null) {
+
+					fileOutputStream.write(fbrut);
+					//fos.write(fbrut);
+					fileOutputStream.close();
+					pfd.close();
+
+					Toast.makeText(this, "Successfully saved \"" + fileURI.getPath() + "\"", Toast.LENGTH_SHORT).show();
+				}else{
+					Toast.makeText(this, "Failed to save \"" + fileURI.getPath() + "\"", Toast.LENGTH_SHORT).show();
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
-				Toast.makeText(this, "Failed to save \"" + filePath + "\"", Toast.LENGTH_SHORT).show();
+				Toast.makeText(this, "Failed to save \"" + fileURI.getPath() + "\"", Toast.LENGTH_SHORT).show();
 			}
 		}
 

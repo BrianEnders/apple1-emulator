@@ -29,6 +29,7 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.net.Uri;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -63,7 +64,7 @@ public class Screen extends SurfaceView implements Runnable, SurfaceHolder.Callb
 	private Rect rect;
 	private Paint paint;
 	private BufferedReader reader;
-	private String filePath;
+	private Uri filePath;
 	private char[] buffer = new char[1024];
 	private int[] bufferI;
 	private int i, length;
@@ -560,7 +561,7 @@ public class Screen extends SurfaceView implements Runnable, SurfaceHolder.Callb
 		return super.onKeyPreIme(keyCode, event);
 	}
 	
-	public void setInputFile(BufferedReader reader, String filePath) {
+	public void setInputFile(BufferedReader reader, Uri fileURI) {
 		this.reader = reader;
 		this.filePath = filePath;
 		i = length = 0;
@@ -581,7 +582,7 @@ public class Screen extends SurfaceView implements Runnable, SurfaceHolder.Callb
 		return (reader != null);
 	}
 	
-	public String getInputFilePath() {
+	public Uri getInputFilePath() {
 		return filePath;
 	}
 	
@@ -632,7 +633,7 @@ public class Screen extends SurfaceView implements Runnable, SurfaceHolder.Callb
 
 		int xLeft2 = width/2-bgimage.getWidth()/4*scale;
 		int yTop2 = yTop-140/2*scale;
-		Log.v("POM1", "windowRect.top - " +(width/2-bgimage.getWidth()/4*scale)+" "+yTop2+" "+(yTop2+bgimage.getHeight()/2*scale));
+		//Leog.v("POM1", "windowRect.top - " +(width/2-bgimage.getWidth()/4*scale)+" "+yTop2+" "+(yTop2+bgimage.getHeight()/2*scale));
 
         bgdest = new Rect(width/2-bgimage.getWidth()/4*scale, yTop2, width/2+bgimage.getWidth()/4*scale, yTop2+bgimage.getHeight()/2*scale);
 	}
@@ -641,13 +642,13 @@ public class Screen extends SurfaceView implements Runnable, SurfaceHolder.Callb
 	public void surfaceCreated(SurfaceHolder holder) {
 		// TODO Auto-generated method stub
 
-		Log.v("POM1", "surfaceCreated");
+		//Log.v("POM1", "surfaceCreated");
 	}
 
 	@Override
 	public void surfaceDestroyed(SurfaceHolder holder) {
 		// TODO Auto-generated method stub
-		Log.v("POM1", "surfaceDestroyed");
+		//Log.v("POM1", "surfaceDestroyed");
 
 	}
 

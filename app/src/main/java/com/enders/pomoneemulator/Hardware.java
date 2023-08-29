@@ -86,7 +86,7 @@ public class Hardware {
         keyMargin = (boxWidth - keyWidth) / 2;
 
 
-        Log.v("POM1", "keyWidth - " +keyWidth);
+        //Leog.v("POM1", "keyWidth - " +keyWidth);
     }
 
     private float pxFromDp(float dp) {

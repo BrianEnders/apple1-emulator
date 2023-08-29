@@ -230,7 +230,7 @@ public class KeyboardManager {
 
     public void keyDown(int sym, int key, int keyId) {
         final int SDL_KEYDOWN = 2;
-        Log.v("POM1", "keyId 1 - " +sym+" "+ key+" "+ keyId);
+        //Leog.v("POM1", "keyId 1 - " +sym+" "+ key+" "+ keyId);
 
         if (keyId == 66) {
             keyboard.pia6820.writeKbd(0xDF | 0x80);
