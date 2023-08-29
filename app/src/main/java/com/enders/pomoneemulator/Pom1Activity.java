@@ -617,7 +617,7 @@ public class Pom1Activity extends AppCompatActivity {
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
-				Toast.makeText(this, "Failed to load \"" + fileURI.getPath() + "\"", Toast.LENGTH_SHORT).show();
+				Toast.makeText(this, "Failed to  load \"" + fileURI.getPath() + "\"", Toast.LENGTH_SHORT).show();
 			} finally {
 				if (reader != null && !screen.isInputFileOpen()) {
 					try {
