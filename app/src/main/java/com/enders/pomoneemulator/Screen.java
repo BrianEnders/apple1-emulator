@@ -563,7 +563,7 @@ public class Screen extends SurfaceView implements Runnable, SurfaceHolder.Callb
 	
 	public void setInputFile(BufferedReader reader, Uri fileURI) {
 		this.reader = reader;
-		this.filePath = filePath;
+		this.filePath = fileURI;
 		i = length = 0;
 	}
 	

@@ -33,6 +33,7 @@ import android.os.ParcelFileDescriptor;
 import android.os.Vibrator;
 import android.provider.OpenableColumns;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -536,9 +537,9 @@ public class Pom1Activity extends AppCompatActivity {
 				InputStream inputStream =
 						getContentResolver().openInputStream(fileURI);
 				reader = new BufferedReader(new InputStreamReader(Objects.requireNonNull(inputStream)));
-				
+
 				CheckBox checkBox = (CheckBox) findViewById(R.id.simulate_keybaord_input);
-				
+				Log.v("POM1","isFileOpen: "+screen.isInputFileOpen());
 				if (checkBox.isChecked()) {
 					if (screen.isInputFileOpen()) {
 						DialogInterface.OnClickListener listener = new DialogInterface.OnClickListener() {
@@ -574,7 +575,7 @@ public class Pom1Activity extends AppCompatActivity {
 						builder.show();
 						return;
 					}
-					
+
 					screen.setInputFile(reader, fileURI);
 				} else {
 					String str;
@@ -679,7 +680,7 @@ public class Pom1Activity extends AppCompatActivity {
 		m6502.resume();
 		screen.resume();
 
-		screen.closeInputFile();
+		//screen.closeInputFile();
 
 		InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
 		imm.hideSoftInputFromWindow(screen.getWindowToken(), 0);
