@@ -25,6 +25,7 @@
     <string name="load_memory">Load Memory</string>
     <string name="save_memory">Save Memory</string>
     <string name="about">About</string>
+    <string name="privacy_options">Privacy Options</string>
     <string name="quit">Quit</string>
     <string name="pixel_size">Pixel Size</string>
     <string name="pixel_size_1x">1x</string>

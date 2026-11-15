@@ -16,6 +16,7 @@
 
 package com.enders.pomoneemulator;
 
+import androidx.core.content.ContextCompat;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
@@ -258,7 +259,7 @@ public class Key extends View {
         paint.setStrokeWidth(3);
         canvas.drawRoundRect(rect, 10, 10, paint);
 
-        paint.setColor(getResources().getColor(R.color.key_color));
+        paint.setColor(ContextCompat.getColor(getContext(), R.color.key_color));
         paint.setAlpha(110);
         paint.setStyle(Style.FILL);
         paint.setStrokeWidth(1);
