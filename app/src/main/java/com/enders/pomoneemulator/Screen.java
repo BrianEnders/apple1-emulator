@@ -47,7 +47,6 @@ import java.util.Arrays;
 
 public class Screen extends SurfaceView implements Runnable, SurfaceHolder.Callback {
 	private Context context;
-	private Bitmap bgimage;
     private byte[] charac = new byte[1024], screenTbl = new byte[960];
 	private int indexX, indexY, terminalSpeed, columns, width, height;
 	private int scale;
@@ -69,8 +68,8 @@ public class Screen extends SurfaceView implements Runnable, SurfaceHolder.Callb
 	private int[] bufferI;
 	private int i, length;
 	private Bitmap bufferImage;
-	private Rect src, bgsrc;
-	private Rect dest, bgdest;
+	private Rect src;
+	private Rect dest;
 
 	private final Matrix mMatrix = new Matrix();
 
@@ -102,15 +101,6 @@ public class Screen extends SurfaceView implements Runnable, SurfaceHolder.Callb
 		blinkCursor = preferences.getBoolean("blinkCursor", true);
 		blockCursor = preferences.getBoolean("blockCursor", false);
 
-		try {
-			InputStream open = context.getAssets().open("bg.png");
-			bgimage = BitmapFactory.decodeStream(open);
-			bgsrc = new Rect(0, 0, bgimage.getWidth(), bgimage.getHeight());
-
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
 		if (context.getFileStreamPath("screenTbl.bin").exists()) {
 			FileInputStream fis = null;
 
@@ -133,8 +123,7 @@ public class Screen extends SurfaceView implements Runnable, SurfaceHolder.Callb
 		rect = new Rect();
 		paint = new Paint();
 
-		paint.setFilterBitmap(true);
-		paint.setAntiAlias(true);
+		paint.setFilterBitmap(false);
 		setFocusable(true);
 		setFocusableInTouchMode(true);
 		requestFocus();
@@ -248,7 +237,8 @@ public class Screen extends SurfaceView implements Runnable, SurfaceHolder.Callb
 	}
 	
 	public void run() {
-		while (!holder.getSurface().isValid());
+		while (running && !holder.getSurface().isValid())
+			idle();
 		
 		redrawScreen();
 		
@@ -355,6 +345,15 @@ public class Screen extends SurfaceView implements Runnable, SurfaceHolder.Callb
 
 	public int getTerminalSpeed() {
 		return terminalSpeed;
+	}
+
+	/** Stands in for the vsync wait of lockCanvas() while there is no surface to draw on. */
+	private static void idle() {
+		try {
+			Thread.sleep(16);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
 	}
 
 	private void synchronizeOutput() {
@@ -465,6 +464,10 @@ public class Screen extends SurfaceView implements Runnable, SurfaceHolder.Callb
 		int xPosition, yPosition;
 				
 		canvas = holder.lockCanvas();
+		if (canvas == null) { // surface hidden (e.g. the ASM tab is open); keep processing output
+			idle();
+			return;
+		}
 		canvas.drawARGB(255, 0, 0, 0);
 
 		//canvas.drawARGB(255, 242, 227, 198);
@@ -520,8 +523,6 @@ public class Screen extends SurfaceView implements Runnable, SurfaceHolder.Callb
 			bufferImage.setPixels(bufferI, 0, bufferImage.getWidth(), 0, 0,
 					bufferImage.getWidth(), bufferImage.getHeight());
             canvas.drawBitmap(bufferImage, src, dest, paint);
-
-			canvas.drawBitmap(bgimage, bgsrc, bgdest, paint);
 			//canvas.drawBitmapMesh(bufferImage, 7, 5, v, 0, null, 0, paint);
 		}
 							
@@ -596,46 +597,27 @@ public class Screen extends SurfaceView implements Runnable, SurfaceHolder.Callb
 		
 		bufferImage = Bitmap.createBitmap((40*7)*2, 24*8*2, Bitmap.Config.ARGB_8888);
 		bufferI = new int[bufferImage.getWidth()*bufferImage.getHeight()];
-		int ori = getResources().getConfiguration().orientation;
-	
-		if(ori == Configuration.ORIENTATION_PORTRAIT)
-		{
-			columns = 40;
-			scale = (width)/280;
-		}else{
-			scale = (height)/(24*8);
-			columns = 40;
-		}
-		if(scale==0)scale = 1;
-		//scale = 2;
-		
+		columns = 40;
+
+		// Fit the 280x192 Apple-1 display to the view, keeping its aspect ratio.
+		// Whole-number scales keep the pixels crisp; fall back to a fractional
+		// scale (with filtering) only when the view is too small for 1x.
+		float fit = Math.min(width / 280f, height / 192f);
+		float drawScale = fit >= 1f ? (float) Math.floor(fit) : fit;
+		// A whole-number scale that leaves big empty borders looks worse than a
+		// slightly soft image, so use the full fit when it gains a lot.
+		if (fit >= 1f && fit - drawScale > 0.5f)
+			drawScale = fit;
+		scale = Math.max(1, Math.round(drawScale));
+		paint.setFilterBitmap(drawScale != Math.round(drawScale));
+
 		src = new Rect(0, 0, bufferImage.getWidth(), bufferImage.getHeight());
 
-		int xLeft = width/2-(280*scale/2);
-        int xRight = xLeft+280*scale;
-
-        int yTop, yBottom;
-        int offset = 0;
-        if(ori == Configuration.ORIENTATION_PORTRAIT && height > bgimage.getHeight()/2*scale)
-        {
-			yTop = height/2-192*scale/2;
-            yBottom = yTop+192*scale;
-        }else{
-            //offset = (bgimage.getHeight()*scale-height)/2;
-            //yTop = (bgimage.getHeight()*2-bufferImage.getHeight())*scale/2;//-offset;
-            //yBottom = (int)(24 * scale * 8)+(bgimage.getHeight()*2-bufferImage.getHeight())*scale/2;//-offset;
-			yTop = height/2-192*scale/2;
-			yBottom = yTop+192*scale;
-        }
-
-		dest = new Rect(xLeft, yTop, xRight, yBottom);
-		//dest = new Rect(0, 0, (int)(bufferImage.getWidth()*scale), (int)(bufferImage.getHeight()*scale));
-
-		int xLeft2 = width/2-bgimage.getWidth()/4*scale;
-		int yTop2 = yTop-140/2*scale;
-		//Leog.v("POM1", "windowRect.top - " +(width/2-bgimage.getWidth()/4*scale)+" "+yTop2+" "+(yTop2+bgimage.getHeight()/2*scale));
-
-        bgdest = new Rect(width/2-bgimage.getWidth()/4*scale, yTop2, width/2+bgimage.getWidth()/4*scale, yTop2+bgimage.getHeight()/2*scale);
+		int drawWidth = Math.round(280 * drawScale);
+		int drawHeight = Math.round(192 * drawScale);
+		int xLeft = (width - drawWidth) / 2;
+		int yTop = (height - drawHeight) / 2;
+		dest = new Rect(xLeft, yTop, xLeft + drawWidth, yTop + drawHeight);
 	}
 
 	@Override

@@ -159,6 +159,23 @@ public class Memory {
 		return mem[address] & 0xFF;
 	}
 	
+	/**
+	 * Reads memory for the debugger without the side effects of a CPU read
+	 * (reading KBD at $D010 would acknowledge a pending key press).
+	 */
+	public int peek(int address) {
+		address &= 0xFFFF;
+		if (address == 0xD013)
+			return pia6820.readDspCr();
+		if (address == 0xD012)
+			return pia6820.readDsp();
+		if (address == 0xD011)
+			return pia6820.readKbdCr();
+		if (address == 0xD010)
+			return 0;
+		return mem[address] & 0xFF;
+	}
+
 	public void memWrite(int address, int value) {
 		if (address == 0xD013) {
 			pia6820.writeDspCr(value);
