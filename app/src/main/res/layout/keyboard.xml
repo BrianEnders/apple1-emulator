@@ -1,4 +1,9 @@
 <!-- http://www.trs-80.com/wordpress/zaps-patches-pokes-tips/internals/#keyboard13 -->
+<!--
+  Adapted from the TRS-80 emulator by Arno Puder and contributors
+  (https://github.com/apuder/TRS-80), licensed under the Apache License 2.0.
+  Modified by Brian Ouellette for the Pom One Emulator (2023-2026).
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:keyboard="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
