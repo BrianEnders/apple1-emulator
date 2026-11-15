@@ -43,6 +43,17 @@ public class M6502 implements Runnable {
 	
 	protected boolean valid = false;
 
+	/** Called on the CPU thread when execution stops at a breakpoint. */
+	public interface BreakListener {
+		void onBreakpoint(int pc);
+	}
+
+	public final boolean[] breakpoints = new boolean[0x10000];
+	private volatile int breakpointCount;
+	private volatile BreakListener breakListener;
+	/** The breakpoint we are resuming from, which must not trigger again immediately. */
+	private int skipBreakAt = -1;
+
 	
 	public M6502(Memory memory, SharedPreferences preferences) {
 		this.memory = memory;
@@ -67,6 +78,7 @@ public class M6502 implements Runnable {
 	public void resume() {
 		if (thread == null) {
 			running = true;
+			skipBreakAt = programCounter;
 			thread = new Thread(this);
 			lastTime = System.currentTimeMillis();
 			thread.start();
@@ -91,6 +103,8 @@ public class M6502 implements Runnable {
 	}
 	
 	public void run() {
+		boolean hitBreakpoint = false;
+
 		while (running) {
 			synchronize();
 			
@@ -101,11 +115,81 @@ public class M6502 implements Runnable {
 					handleIRQ();
 				if (NMI)
 					handleNMI();
-				
+
+				if (breakpointCount > 0 && breakpoints[programCounter & 0xFFFF] && programCounter != skipBreakAt) {
+					running = false;
+					hitBreakpoint = true;
+					break;
+				}
+				skipBreakAt = -1;
+
 				executeOpcode();
 			}
 		}
+
+		BreakListener listener = breakListener;
+		if (hitBreakpoint && listener != null)
+			listener.onBreakpoint(programCounter);
 	}
+
+	// ------------------------------------------------------------ debugger support
+
+	/** True while the CPU thread is executing (not paused or stopped at a breakpoint). */
+	public boolean isRunning() {
+		return thread != null && running;
+	}
+
+	/** Executes exactly one instruction. Only call while paused. */
+	public void step() {
+		if (thread != null)
+			return;
+		if ((statusRegister & I) == 0 && IRQ)
+			handleIRQ();
+		if (NMI)
+			handleNMI();
+		executeOpcode();
+		programCounter &= 0xFFFF;
+	}
+
+	/**
+	 * Starts executing at {@code address} with a return address on the stack
+	 * so a final RTS drops back into the Woz Monitor's input loop.
+	 */
+	public void runAt(int address, int returnTo) {
+		boolean wasRunning = thread != null;
+		pause();
+		int ret = (returnTo - 1) & 0xFFFF;
+		memory.memWrite(0x100 + stackPointer, ret >> 8);
+		stackPointer = stackPointer - 1 & 0xFF;
+		memory.memWrite(0x100 + stackPointer, ret & 0xFF);
+		stackPointer = stackPointer - 1 & 0xFF;
+		programCounter = address & 0xFFFF;
+		if (wasRunning)
+			resume();
+	}
+
+	public void setBreakListener(BreakListener listener) {
+		breakListener = listener;
+	}
+
+	public void toggleBreakpoint(int address) {
+		address &= 0xFFFF;
+		breakpoints[address] = !breakpoints[address];
+		breakpointCount += breakpoints[address] ? 1 : -1;
+	}
+
+	public void clearBreakpoints() {
+		java.util.Arrays.fill(breakpoints, false);
+		breakpointCount = 0;
+	}
+
+	public int getProgramCounter() { return programCounter & 0xFFFF; }
+	public void setProgramCounter(int pc) { programCounter = pc & 0xFFFF; }
+	public int getAccumulator() { return accumulator & 0xFF; }
+	public int getXRegister() { return xRegister & 0xFF; }
+	public int getYRegister() { return yRegister & 0xFF; }
+	public int getStackPointer() { return stackPointer & 0xFF; }
+	public int getStatusRegister() { return statusRegister & 0xFF; }
 	
 	private int memReadAbsolute(int adr) {
 		return (memory.memRead(adr) | memory.memRead(adr + 1) << 8);

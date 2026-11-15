@@ -1,6 +1,10 @@
 /*
  * Copyright 2012-2013, Arno Puder
  *
+ * Modified by Brian Ouellette for the Pom One Emulator (2023-2026): adapted from
+ * the TRS-80 emulator (https://github.com/apuder/TRS-80) for the Apple-1 and moved
+ * to the com.enders.pomoneemulator package.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,6 +22,8 @@ package com.enders.pomoneemulator;
 
 import android.content.res.XmlResourceParser;
 import android.os.Handler;
+import android.os.Build;
+import android.os.Looper;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.util.Log;
@@ -47,7 +53,7 @@ public class KeyboardManager {
 
     private static List<KeyMap> keyboardMapping;
 
-    private Handler handler = new Handler();
+    private Handler handler = new Handler(Looper.getMainLooper());
 
     public Vibrator vibrator;
     
@@ -225,7 +231,10 @@ public class KeyboardManager {
         keyDown(keyMap.sym, keyMap.key, keyId);
         // it is safe to cancel other vibrations currently taking place
         vibrator.cancel();
-        vibrator.vibrate(15);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+            vibrator.vibrate(VibrationEffect.createOneShot(15, VibrationEffect.DEFAULT_AMPLITUDE));
+        else
+            vibrator.vibrate(15);
     }
 
     public void keyDown(int sym, int key, int keyId) {

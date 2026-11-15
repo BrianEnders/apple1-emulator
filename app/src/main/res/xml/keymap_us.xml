@@ -1,4 +1,9 @@
 <!-- http://www.trs-80.com/wordpress/zaps-patches-pokes-tips/internals/#keyboard13 -->
+<!--
+  Adapted from the TRS-80 emulator by Arno Puder and contributors
+  (https://github.com/apuder/TRS-80), licensed under the Apache License 2.0.
+  Modified by Brian Ouellette for the Pom One Emulator (2023-2026).
+-->
 <KeyMapping>
     <KeyMap label="0" sym="0" key="0" name="key_0" value="0" />
     <KeyMap label="1" sym="0" key="1" name="key_1" value="1" />

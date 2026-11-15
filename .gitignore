@@ -13,3 +13,12 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Local build outputs and per-machine IDE state
+/app/release
+/.idea/deploymentTargetDropDown.xml
+/.idea/deploymentTargetSelector.xml
+/.idea/AndroidProjectSystem.xml
+/.idea/migrations.xml
+/.idea/other.xml
+/.idea/runConfigurations.xml

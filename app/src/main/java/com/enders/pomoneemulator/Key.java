@@ -1,6 +1,10 @@
 /*
  * Copyright 2012-2013, Arno Puder
  *
+ * Modified by Brian Ouellette for the Pom One Emulator (2023-2026): adapted from
+ * the TRS-80 emulator (https://github.com/apuder/TRS-80) for the Apple-1 and moved
+ * to the com.enders.pomoneemulator package.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,6 +20,7 @@
 
 package com.enders.pomoneemulator;
 
+import androidx.core.content.ContextCompat;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
@@ -258,7 +263,7 @@ public class Key extends View {
         paint.setStrokeWidth(3);
         canvas.drawRoundRect(rect, 10, 10, paint);
 
-        paint.setColor(getResources().getColor(R.color.key_color));
+        paint.setColor(ContextCompat.getColor(getContext(), R.color.key_color));
         paint.setAlpha(110);
         paint.setStyle(Style.FILL);
         paint.setStrokeWidth(1);

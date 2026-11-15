@@ -19,20 +19,20 @@
 package com.enders.pomoneemulator;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.graphics.Rect;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
 import android.os.Vibrator;
+import android.os.VibratorManager;
 import android.provider.OpenableColumns;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -50,26 +50,44 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.RadioGroup;
 import android.widget.RadioGroup.OnCheckedChangeListener;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.EdgeToEdge;
+import androidx.activity.SystemBarStyle;
+import androidx.activity.OnBackPressedCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
+import androidx.core.view.WindowInsetsCompat;
 
+import com.enders.pomoneemulator.asm.AsmProgram;
+import com.enders.pomoneemulator.asm.Assembler;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdSize;
 import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.MobileAds;
+import com.google.android.ump.ConsentInformation;
+import com.google.android.ump.ConsentRequestParameters;
+import com.google.android.ump.UserMessagingPlatform;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileOutputStream;
 
 import java.io.IOException;
 import java.io.InputStream;
 
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
+import java.io.OutputStream;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 public class Pom1Activity extends AppCompatActivity {
@@ -97,14 +115,52 @@ public class Pom1Activity extends AppCompatActivity {
 	private LinearLayout screenContainer;
 	private int openMode;
 	private boolean loaded;
+	private ConsentInformation consentInformation;
+	private final AtomicBoolean mobileAdsInitStarted = new AtomicBoolean(false);
+	private volatile boolean mobileAdsReady;
+
+	static final int MODE_TERMINAL = 0, MODE_DEBUG = 1, MODE_ASM = 2;
+	private static final String[] MODE_NAMES = {"TERMINAL", "DEBUG", "ASM"};
+	private static final String ASM_FILE = "program.asm";
+	/** Woz Monitor GETLINE: where an RTS from an assembled program lands. */
+	private static final int WOZ_GETLINE = 0xFF1F;
+
+	private int mode = MODE_TERMINAL;
+	/** True while the debugger holds the CPU paused; app pause/resume must not restart it. */
+	private boolean cpuHeld;
+	private AsmProgram asmProgram;
+	private AsmPanel asmPanel;
+	private DebugPanel debugPanel;
+	private final TextView[] modeTabs = new TextView[3];
+
+	private final ActivityResultLauncher<String[]> openSourceLauncher =
+			registerForActivityResult(new ActivityResultContracts.OpenDocument(), this::importSourceFrom);
+	private final ActivityResultLauncher<String> createSourceLauncher =
+			registerForActivityResult(new ActivityResultContracts.CreateDocument("text/plain"), this::exportSourceTo);
+
+	private final ActivityResultLauncher<String[]> openDocumentLauncher =
+			registerForActivityResult(new ActivityResultContracts.OpenDocument(), this::onFileChosen);
+	private final ActivityResultLauncher<String> createDocumentLauncher =
+			registerForActivityResult(new ActivityResultContracts.CreateDocument("*/*"), this::onFileChosen);
 
 	@Override
     public void onCreate(Bundle savedInstanceState) {
+		EdgeToEdge.enable(this,
+				SystemBarStyle.dark(Color.TRANSPARENT),
+				SystemBarStyle.dark(Color.TRANSPARENT));
         super.onCreate(savedInstanceState);
         preferences = getPreferences(MODE_PRIVATE);
 
 		this.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
-		vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+		applySystemBarInsets();
+		getOnBackPressedDispatcher().addCallback(this, backCallback);
+
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+			VibratorManager vibratorManager = (VibratorManager) getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+			vibrator = vibratorManager.getDefaultVibrator();
+		} else {
+			vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+		}
 		pia6820 = new Pia6820(preferences);
 		memory = new Memory(this, pia6820, preferences);
 		m6502 = new M6502(memory, preferences);
@@ -113,10 +169,87 @@ public class Pom1Activity extends AppCompatActivity {
 
 		keyboard = new Keyboard(pia6820, screen);
 
+		asmProgram = loadAsmProgram();
+		m6502.setBreakListener(pc -> runOnUiThread(() -> {
+			m6502.pause();
+			cpuHeld = true;
+			setMode(MODE_DEBUG);
+			if (debugPanel != null)
+				debugPanel.onBreakpoint(pc);
+		}));
+		mode = preferences.getInt("mode", MODE_TERMINAL);
+
 		//screenContainer = (LinearLayout) findViewById(R.id.screen_container);
 		//screenContainer.removeAllViews();
 		//screenContainer.addView(screen);
         initGame();
+		requestAdConsent();
+	}
+
+	/**
+	 * The app draws edge-to-edge (required when targeting API 35+), so pad the
+	 * content area to keep the screen and keyboard clear of the system bars,
+	 * display cutouts and the on-screen IME. The content view survives every
+	 * setContentView() call, so this only needs to be set up once.
+	 */
+	private void applySystemBarInsets() {
+		View content = findViewById(android.R.id.content);
+		ViewCompat.setOnApplyWindowInsetsListener(content, (v, windowInsets) -> {
+			Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()
+					| WindowInsetsCompat.Type.displayCutout()
+					| WindowInsetsCompat.Type.ime());
+			// AppCompat's action bar overlays the content when drawing edge-to-edge;
+			// the top inset it hands us already includes the action bar height.
+			v.setPadding(insets.left, insets.top, insets.right, insets.bottom);
+			return WindowInsetsCompat.CONSUMED;
+		});
+	}
+
+	@Override
+	public void setContentView(int layoutResID) {
+		super.setContentView(layoutResID);
+		// The system bars sit over the content's padding, so they show the
+		// content background: black on the emulator screen (light icons), the
+		// theme's light window background on the option screens (dark icons).
+		boolean emulatorScreen = layoutResID == R.layout.activity_apple_one;
+		View content = findViewById(android.R.id.content);
+		content.setBackgroundColor(emulatorScreen ? Color.BLACK : Color.TRANSPARENT);
+		WindowInsetsControllerCompat controller =
+				WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+		controller.setAppearanceLightStatusBars(!emulatorScreen);
+		controller.setAppearanceLightNavigationBars(!emulatorScreen);
+	}
+
+	private void requestAdConsent() {
+		consentInformation = UserMessagingPlatform.getConsentInformation(this);
+		ConsentRequestParameters params = new ConsentRequestParameters.Builder().build();
+		consentInformation.requestConsentInfoUpdate(this, params,
+				() -> UserMessagingPlatform.loadAndShowConsentFormIfRequired(this, formError -> {
+					if (formError != null)
+						Log.w("POM1", "Consent form error: " + formError.getMessage());
+					if (consentInformation.canRequestAds())
+						initializeMobileAds();
+					invalidateOptionsMenu();
+				}),
+				requestError -> Log.w("POM1", "Consent info update error: " + requestError.getMessage()));
+
+		// Consent from a previous session can be used right away.
+		if (consentInformation.canRequestAds())
+			initializeMobileAds();
+	}
+
+	private void initializeMobileAds() {
+		if (!mobileAdsInitStarted.compareAndSet(false, true))
+			return;
+		new Thread(() -> MobileAds.initialize(this, status -> runOnUiThread(() -> {
+			mobileAdsReady = true;
+			loadBanner();
+		}))).start();
+	}
+
+	private boolean isPrivacyOptionsRequired() {
+		return consentInformation != null && consentInformation.getPrivacyOptionsRequirementStatus()
+				== ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED;
 	}
 
 	public void initGame() {
@@ -133,15 +266,16 @@ public class Pom1Activity extends AppCompatActivity {
 
 		adContainerView = findViewById(R.id.adView);
 
+		if (mAdView != null)
+			mAdView.destroy();
 		mAdView = new AdView(this);
 		mAdView.setAdUnitId("ca-app-pub-7298593861312209/3404672430");
+		mAdView.setAdSize(AdSize.BANNER);
 		adContainerView.addView(mAdView);
 		loadBanner();
 
-		DisplayMetrics displayMetrics = new DisplayMetrics();
-		getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
-		int height = displayMetrics.heightPixels;
-		int width = displayMetrics.widthPixels;
+		int height = getResources().getDisplayMetrics().heightPixels;
+		int width = getResources().getDisplayMetrics().widthPixels;
 
 		windowRect = new Rect();
 		windowRect.top = 0;
@@ -158,6 +292,28 @@ public class Pom1Activity extends AppCompatActivity {
 		getLayoutInflater().inflate(R.layout.keyboard, keyboardContainer, true);
 
 		keyboardContainer.requestLayout();
+
+		buildModeBar();
+		debugPanel = new DebugPanel(this, m6502, memory, new DebugPanel.Host() {
+			@Override
+			public void pauseCpu() {
+				m6502.pause();
+				cpuHeld = true;
+			}
+
+			@Override
+			public void resumeCpu() {
+				cpuHeld = false;
+				m6502.resume();
+			}
+		});
+		ViewGroup debugContainer = findViewById(R.id.debug_container);
+		debugContainer.addView(debugPanel.getView());
+		asmPanel = new AsmPanel(this, asmProgram, asmHost);
+		ViewGroup asmContainer = findViewById(R.id.asm_container);
+		asmContainer.addView(asmPanel.getView());
+		setMode(mode);
+
 		loaded = true;
 
 	}
@@ -171,9 +327,9 @@ public class Pom1Activity extends AppCompatActivity {
     }
 
 	private void loadBanner() {
-		AdRequest adRequest = new AdRequest.Builder() .build();
-		mAdView.setAdSize(AdSize.BANNER);
-		mAdView.loadAd(adRequest);
+		if (!mobileAdsReady || mAdView == null)
+			return;
+		mAdView.loadAd(new AdRequest.Builder().build());
 	}
 
 	@Override
@@ -195,6 +351,8 @@ public class Pom1Activity extends AppCompatActivity {
 			menu.getItem(4).setEnabled(true);
 			menu.getItem(5).setEnabled(true);
 		}
+
+		menu.findItem(R.id.privacy_options).setVisible(isPrivacyOptionsRequired());
 		
 		return true;
 	}
@@ -220,6 +378,7 @@ public class Pom1Activity extends AppCompatActivity {
 			screen.reset();
 			pia6820.reset();
 			memory.reset();
+			cpuHeld = false;
 			m6502.resume();
 			screen.resume();
 			return true;
@@ -356,16 +515,16 @@ public class Pom1Activity extends AppCompatActivity {
 		}
 
 		if(item.getItemId() == R.id.keyboard) {
-			if(showKeyboard == true){
-				keyboardContainer.setVisibility(View.GONE);
-				item.setTitle("Show Keyboard");
-				showKeyboard = false;
-			}else{
-				keyboardContainer.setVisibility(View.VISIBLE);
-				item.setTitle("Hide Keyboard");
-				showKeyboard = true;
-			}
-
+			showKeyboard = !showKeyboard;
+			item.setTitle(showKeyboard ? "Hide Keyboard" : "Show Keyboard");
+			setMode(mode);
+			return true;
+		}
+		if(item.getItemId() == R.id.privacy_options) {
+			UserMessagingPlatform.showPrivacyOptionsForm(this, formError -> {
+				if (formError != null)
+					Toast.makeText(this, formError.getMessage(), Toast.LENGTH_SHORT).show();
+			});
 			return true;
 		}
 		if(item.getItemId() == R.id.quit) {
@@ -377,56 +536,49 @@ public class Pom1Activity extends AppCompatActivity {
     }
 	private long mLastPress = 0;
 
-	private static final int PICK_PDF_FILE = 2;
+	private Toast backToast;
 
 	private void openFile() {
-		Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-		intent.addCategory(Intent.CATEGORY_OPENABLE);
-		intent.setType("*/*");
-
-		// Optionally, specify a URI for the file that should appear in the
-		// system file picker when it loads.
-		//intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, pickerInitialUri);
-
-		startActivityForResult(intent, PICK_PDF_FILE);
+		openDocumentLauncher.launch(new String[] {"*/*"});
 	}
-
-	private static final int CREATE_FILE = 1;
 
 	private void createFile() {
-		Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-		intent.addCategory(Intent.CATEGORY_OPENABLE);
-		intent.setType("*/*");
-		intent.putExtra(Intent.EXTRA_TITLE, "test.bin");
-
-		// Optionally, specify a URI for the directory that should be opened in
-		// the system file picker when your app creates the document.
-		//intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, pickerInitialUri);
-
-		startActivityForResult(intent, CREATE_FILE);
+		createDocumentLauncher.launch("memory.bin");
 	}
 
-	@Override
-    public void onBackPressed() {
-    	if (isOptionView) {
-    		//setConte ntView(screen);
-			isOptionView = false;
-			setContentView(R.layout.activity_apple_one);
-			initGame();
-    		m6502.resume();
-    		screen.resume();
-    	} else {
-    	    Toast onBackPressedToast = Toast.makeText(this, "Press Back again to Exit", Toast.LENGTH_SHORT);
-    	    long currentTime = System.currentTimeMillis();
-    	    if (currentTime - mLastPress > 2000) {
-    	        onBackPressedToast.show();
-    	        mLastPress = currentTime;
-    	    } else {
-    	        onBackPressedToast.cancel();  //Difference with previous answer. Prevent continuing showing toast after application exit 
-    	        super.onBackPressed();
-    	    }
-    	}
-    }
+	private void onFileChosen(Uri uri) {
+		if (uri == null)
+			return;
+		fileURI = uri;
+		EditText editText = (EditText) findViewById(R.id.file_path);
+		if (editText != null)
+			editText.setText(uri.getPath());
+	}
+
+	private final OnBackPressedCallback backCallback = new OnBackPressedCallback(true) {
+		@Override
+		public void handleOnBackPressed() {
+			if (isOptionView) {
+				isOptionView = false;
+				setContentView(R.layout.activity_apple_one);
+				initGame();
+				resumeCpu();
+				screen.resume();
+				return;
+			}
+
+			long currentTime = System.currentTimeMillis();
+			if (currentTime - mLastPress > 2000) {
+				backToast = Toast.makeText(Pom1Activity.this, "Press Back again to Exit", Toast.LENGTH_SHORT);
+				backToast.show();
+				mLastPress = currentTime;
+			} else {
+				if (backToast != null)
+					backToast.cancel(); // don't leave the toast showing after exit
+				finish();
+			}
+		}
+	};
 
 	@Override
     public void onResume() {
@@ -437,7 +589,7 @@ public class Pom1Activity extends AppCompatActivity {
     	if (!isOptionView && loaded == true) {
 			screenContainer.removeView(screen);
 			initGame();
-			m6502.resume();
+			resumeCpu();
 			screen.resume();
     	} 
     }
@@ -452,6 +604,9 @@ public class Pom1Activity extends AppCompatActivity {
     		m6502.pause();
     		screen.pause(); 
     	}
+		if (debugPanel != null)
+			debugPanel.setVisible(false);
+		preferences.edit().putInt("mode", mode).apply();
     	
 //    	if (isFinishing()) {
 //    		SharedPreferences.Editor editor = preferences.edit();
@@ -462,20 +617,6 @@ public class Pom1Activity extends AppCompatActivity {
 //    		editor.commit();
 //    		screen.closeInputFile();
 //    	}
-    }
-	
-	@Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		if (resultCode == Activity.RESULT_OK && requestCode == PICK_PDF_FILE) {
-			EditText editText = (EditText) findViewById(R.id.file_path);
-			fileURI = data.getData();
-			editText.setText(fileURI.getPath());
-		} else if (resultCode == Activity.RESULT_OK && requestCode == CREATE_FILE) {
-			EditText editText = (EditText) findViewById(R.id.file_path);
-			fileURI = data.getData();
-			editText.setText(fileURI.getPath());
-		} else
-			super.onActivityResult(requestCode, resultCode, data);
     }
 	
 	public void saveConfiguration() {
@@ -529,6 +670,10 @@ public class Pom1Activity extends AppCompatActivity {
 
 	@SuppressLint("MissingInflatedId")
 	public void loadMemory() {
+		if (fileURI == null) {
+			Toast.makeText(this, "File path not set", Toast.LENGTH_SHORT).show();
+			return;
+		}
 
 		RadioGroup radioGroup = (RadioGroup) findViewById(R.id.file_format);
 		
@@ -564,7 +709,7 @@ public class Pom1Activity extends AppCompatActivity {
 								setContentView(R.layout.activity_apple_one);
 								initGame();
 								isOptionView = false;
-								m6502.resume();
+								resumeCpu();
 								screen.resume();
 							}
 						};
@@ -638,14 +783,13 @@ public class Pom1Activity extends AppCompatActivity {
 			
 			int start = Integer.parseInt(editText.getText().toString(), 16);
 			
-			File file = new File(fileURI.getPath());
-
 			Cursor returnCursor =
 					getContentResolver().query(fileURI, null, null, null, null);
 			int sizeIndex = returnCursor.getColumnIndex(OpenableColumns.SIZE);
 			returnCursor.moveToFirst();
 
 			int size = (int) returnCursor.getLong(sizeIndex);
+			returnCursor.close();
 
 			if (size > 65536 || start + size - 1 > 65535) {
 				Toast.makeText(this, "File size too large", Toast.LENGTH_SHORT).show();
@@ -655,19 +799,17 @@ public class Pom1Activity extends AppCompatActivity {
 
 			}
 
-			InputStream fis = null;
-
-			try {
-			 	fis = getContentResolver().openInputStream(fileURI);
-			//fis = new InputStream(new File(fileURI.getPath()));
-//
+			try (InputStream fis = getContentResolver().openInputStream(fileURI)) {
 				byte[] fbrut = new byte[size];
-//
-				if (fbrut != null) {
-					fis.read(fbrut);
-					memory.setMemory(fbrut, start, size);
-					Toast.makeText(this, "Successfully loaded \"" + fileURI.getPath() + "\"", Toast.LENGTH_SHORT).show();
+				int read = 0;
+				while (read < size) {
+					int n = fis.read(fbrut, read, size - read);
+					if (n < 0)
+						break;
+					read += n;
 				}
+				memory.setMemory(fbrut, start, read);
+				Toast.makeText(this, "Successfully loaded \"" + fileURI.getPath() + "\"", Toast.LENGTH_SHORT).show();
 			} catch (IOException e) {
 				e.printStackTrace();
 				Toast.makeText(this, "Failed to load \"" + fileURI.getPath() + "\"", Toast.LENGTH_SHORT).show();
@@ -677,7 +819,7 @@ public class Pom1Activity extends AppCompatActivity {
 		isOptionView = false;
 		setContentView(R.layout.activity_apple_one);
 		initGame();
-		m6502.resume();
+		resumeCpu();
 		screen.resume();
 
 		//screen.closeInputFile();
@@ -797,13 +939,173 @@ public class Pom1Activity extends AppCompatActivity {
 		setContentView(R.layout.activity_apple_one);
 		initGame();
 		isOptionView = false;
-		m6502.resume();
+		resumeCpu();
 		screen.resume();
 
 		screen.closeInputFile();
 
 		InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
 		imm.hideSoftInputFromWindow(screen.getWindowToken(), 0);
+	}
+
+	// ------------------------------------------------------------ TERMINAL / DEBUG / ASM
+
+	private void resumeCpu() {
+		if (!cpuHeld)
+			m6502.resume();
+	}
+
+	private void buildModeBar() {
+		LinearLayout bar = findViewById(R.id.mode_bar);
+		bar.removeAllViews();
+		bar.setBackgroundColor(UiKit.PANEL);
+		int h = UiKit.dp(this, 34);
+		for (int i = 0; i < MODE_NAMES.length; i++) {
+			final int m = i;
+			TextView tab = UiKit.key(this, MODE_NAMES[i], UiKit.PANEL, UiKit.DIM, v -> setMode(m));
+			tab.setTextSize(13);
+			UiKit.addWeighted(bar, tab, 1, h);
+			modeTabs[i] = tab;
+		}
+	}
+
+	private void setMode(int newMode) {
+		if (mode == MODE_ASM && newMode != MODE_ASM && asmPanel != null)
+			asmPanel.onHidden();
+		mode = newMode;
+		if (screenContainer == null || isOptionView)
+			return;
+		for (int i = 0; i < modeTabs.length; i++) {
+			if (modeTabs[i] == null)
+				continue;
+			boolean selected = i == mode;
+			modeTabs[i].setTextColor(selected ? UiKit.GREEN : UiKit.DIM);
+			android.graphics.drawable.Drawable bg = modeTabs[i].getBackground();
+			if (bg instanceof android.graphics.drawable.RippleDrawable) {
+				android.graphics.drawable.Drawable shape = ((android.graphics.drawable.RippleDrawable) bg).getDrawable(0);
+				if (shape instanceof android.graphics.drawable.GradientDrawable)
+					((android.graphics.drawable.GradientDrawable) shape).setColor(selected ? UiKit.HIGHLIGHT : UiKit.PANEL);
+			}
+		}
+		screenContainer.setVisibility(mode == MODE_ASM ? View.GONE : View.VISIBLE);
+		keyboardContainer.setVisibility(mode == MODE_TERMINAL && showKeyboard ? View.VISIBLE : View.GONE);
+		findViewById(R.id.debug_container).setVisibility(mode == MODE_DEBUG ? View.VISIBLE : View.GONE);
+		findViewById(R.id.asm_container).setVisibility(mode == MODE_ASM ? View.VISIBLE : View.GONE);
+		if (debugPanel != null)
+			debugPanel.setVisible(mode == MODE_DEBUG);
+		if (mode != MODE_ASM) {
+			getWindow().getDecorView().clearFocus();
+			screen.requestFocus();
+			InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+			imm.hideSoftInputFromWindow(screen.getWindowToken(), 0);
+		}
+	}
+
+	private final AsmPanel.Host asmHost = new AsmPanel.Host() {
+		@Override
+		public void loadAssembled(Assembler.Result result, boolean run) {
+			for (Assembler.Line line : result.lines) {
+				int end = line.address + line.bytes.length - 1;
+				if (line.bytes.length == 0)
+					continue;
+				if (end > 0xFFFF || end >= 0xFF00) {
+					asmPanel.setStatus("Line " + line.number + " would overwrite the Woz Monitor ($FF00-$FFFF)", UiKit.RED);
+					return;
+				}
+				if (line.address <= 0xD013 && end >= 0xD010) {
+					asmPanel.setStatus("Line " + line.number + " would write into the I/O ports ($D010-$D013)", UiKit.RED);
+					return;
+				}
+			}
+			for (Assembler.Line line : result.lines)
+				for (int i = 0; i < line.bytes.length; i++)
+					memory.memWrite(line.address + i, line.bytes[i] & 0xFF);
+
+			if (!run) {
+				asmPanel.setStatus(String.format(java.util.Locale.US,
+						"Loaded %d bytes · in the monitor type %04XR to run", result.byteCount(), result.entry), UiKit.GREEN);
+				return;
+			}
+			cpuHeld = false;
+			m6502.runAt(result.entry, WOZ_GETLINE);
+			m6502.resume();
+			setMode(MODE_TERMINAL);
+		}
+
+		@Override
+		public void importSource() {
+			openSourceLauncher.launch(new String[]{"text/*", "application/octet-stream", "*/*"});
+		}
+
+		@Override
+		public void exportSource() {
+			createSourceLauncher.launch("program.asm");
+		}
+
+		@Override
+		public void sourceChanged() {
+			saveAsmProgram();
+		}
+
+		@Override
+		public boolean isBreakpoint(int address) {
+			return m6502.breakpoints[address & 0xFFFF];
+		}
+
+		@Override
+		public void toggleBreakpoint(int address) {
+			m6502.toggleBreakpoint(address);
+		}
+	};
+
+	private AsmProgram loadAsmProgram() {
+		if (!getFileStreamPath(ASM_FILE).exists())
+			return AsmProgram.example();
+		AsmProgram program = new AsmProgram();
+		try (InputStream in = openFileInput(ASM_FILE)) {
+			program.read(new InputStreamReader(in, StandardCharsets.UTF_8));
+		} catch (IOException e) {
+			Log.w("POM1", "Could not read " + ASM_FILE, e);
+		}
+		return program;
+	}
+
+	private void saveAsmProgram() {
+		try (OutputStreamWriter out = new OutputStreamWriter(openFileOutput(ASM_FILE, MODE_PRIVATE), StandardCharsets.UTF_8)) {
+			asmProgram.write(out);
+		} catch (IOException e) {
+			Log.w("POM1", "Could not save " + ASM_FILE, e);
+		}
+	}
+
+	private void importSourceFrom(Uri uri) {
+		if (uri == null)
+			return;
+		try (InputStream in = getContentResolver().openInputStream(uri)) {
+			AsmProgram imported = new AsmProgram();
+			imported.read(new InputStreamReader(Objects.requireNonNull(in), StandardCharsets.UTF_8));
+			asmProgram.clear();
+			asmProgram.lines().putAll(imported.lines());
+			saveAsmProgram();
+			if (asmPanel != null)
+				asmPanel.reload();
+			Toast.makeText(this, "Imported " + asmProgram.lines().size() + " lines", Toast.LENGTH_SHORT).show();
+		} catch (IOException | RuntimeException e) {
+			Toast.makeText(this, "Could not import: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+		}
+	}
+
+	private void exportSourceTo(Uri uri) {
+		if (uri == null)
+			return;
+		try (OutputStream os = getContentResolver().openOutputStream(uri, "wt")) {
+			OutputStreamWriter out = new OutputStreamWriter(Objects.requireNonNull(os), StandardCharsets.UTF_8);
+			asmProgram.write(out);
+			out.flush();
+			Toast.makeText(this, "Exported " + asmProgram.lines().size() + " lines", Toast.LENGTH_SHORT).show();
+		} catch (IOException | RuntimeException e) {
+			Toast.makeText(this, "Could not export: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+		}
 	}
 
 	public int getKeyWidth() {
